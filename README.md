@@ -37,7 +37,7 @@ Auth:
 
 API Routes and Usage:
 
-user-service (http://localhost:3001)
+user-service (http://localhost:3001 or http://13.126.194.161:3001)
 - POST /register
   - Use: Create a new user.
   - Body: { "name": "Jane", "email": "jane@example.com", "password": "StrongPass123!" }
@@ -50,7 +50,7 @@ user-service (http://localhost:3001)
   - curl:
     TOKEN=$(curl -s -X POST http://localhost:3001/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"AdminPass123!"}' | jq -r .token)
 
-car-service (http://localhost:3002)
+car-service (http://localhost:3002 or http://13.126.194.161:3002)
 - GET /cars
   - Use: List cars. Response is cached for ~30s.
   - Optional query: ?available=true
@@ -63,7 +63,7 @@ car-service (http://localhost:3002)
   - curl:
     curl -s -X POST http://localhost:3002/cars -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"make":"Tesla","model":"Model 3","plate":"ABC-123","seats":5}'
 
-booking-service (http://localhost:3003)
+booking-service (http://localhost:3003 or http://13.126.194.161:3003)
 - POST /bookings
   - Use: Create a booking for a car; prevents overlaps via per-day slots (Mongo txn).
   - Auth: Authorization: Bearer $TOKEN
@@ -87,3 +87,5 @@ Swagger:
 
 Tests:
 - (cd booking-service && npm test) runs overlap unit test with in-memory replica set.
+
+Base hosts: http://localhost and http://13.126.194.161
