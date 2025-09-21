@@ -35,6 +35,11 @@ Auth:
 - Create car requires admin role.
 - Create/cancel booking requires authenticated user.
 
+Inter-microservice communication:
+- Services communicate via HTTP API calls (REST).
+- During booking creation, booking-service calls car-service to validate the target car and confirm current availability before reserving slots.
+- If car-service reports the car is unavailable or the call fails, the booking is not created.
+
 API Routes and Usage:
 
 user-service (http://localhost:3001 or http://13.126.194.161:3001)
