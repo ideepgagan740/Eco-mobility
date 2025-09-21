@@ -1,0 +1,3 @@
+● docker-desktop.service - Docker Desktop
+     Loaded: loaded (/usr/lib/systemd/user/docker-desktop.service; disabled; vendor preset: enabled)
+     Active: inactive (dead)

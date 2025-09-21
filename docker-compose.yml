@@ -1,0 +1,184 @@
+services:
+  mongo:
+    image: mongo:6
+    container_name: eco_mongo
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - mongo_data:/data/db
+    profiles: ["local-db", "seed"]
+
+  mongo-rs-init:
+    image: mongo:6
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint:
+      - bash
+      - -lc
+      - |
+        set -e
+        echo "Checking replica set status..."
+        if mongosh --host mongo:27017 --quiet --eval "try { rs.status().ok } catch (e) { 0 }" | grep -q 1; then
+          echo "Replica set already initiated."
+          exit 0
+        fi
+        echo "Initiating replica set..."
+        mongosh --host mongo:27017 --quiet --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]})"
+        echo "Waiting for PRIMARY..."
+        for i in $(seq 1 30); do
+          if mongosh --host mongo:27017 --quiet --eval "db.isMaster().ismaster" | grep -q true; then
+            echo "Replica set PRIMARY ready."
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Replica set not ready in time"
+        exit 1
+    restart: "no"
+    profiles: ["local-db", "seed"]
+
+  redis:
+    image: redis:7
+    container_name: eco_redis
+
+  user-service:
+    image: node:20-alpine
+    container_name: eco_user_service
+    working_dir: /app
+    volumes:
+      - ./user-service:/app
+      - ./shared:/app/shared:ro
+      - ./shared:/shared:ro
+    environment:
+      - PORT=${USER_SERVICE_PORT:-3001}
+      - MONGODB_URI=${USERS_DB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV:-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
+      - JWT_ISSUER=${JWT_ISSUER:-car-booking}
+      - NODE_PATH=/app/node_modules
+    command: sh -c "npm install && node src/index.js"
+    ports:
+      - "${USER_SERVICE_PORT:-3001}:3001"
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  car-service:
+    image: node:20-alpine
+    container_name: eco_car_service
+    working_dir: /app
+    volumes:
+      - ./car-service:/app
+      - ./shared:/app/shared:ro
+      - ./shared:/shared:ro
+    environment:
+      - PORT=${CAR_SERVICE_PORT:-3002}
+      - MONGODB_URI=${CARS_DB_URI}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV:-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
+      - JWT_ISSUER=${JWT_ISSUER:-car-booking}
+      - NODE_PATH=/app/node_modules
+    depends_on:
+      - redis
+    command: sh -c "npm install && node src/index.js"
+    ports:
+      - "${CAR_SERVICE_PORT:-3002}:3002"
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  booking-service:
+    image: node:20-alpine
+    container_name: eco_booking_service
+    working_dir: /app
+    volumes:
+      - ./booking-service:/app
+      - ./shared:/app/shared:ro
+      - ./shared:/shared:ro
+    environment:
+      - PORT=${BOOKING_SERVICE_PORT:-3003}
+      - MONGODB_URI=${BOOKINGS_DB_URI}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV:-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
+      - JWT_ISSUER=${JWT_ISSUER:-car-booking}
+      - NODE_PATH=/app/node_modules
+      # - CAR_SERVICE_URL=http://localhost:3002
+      - CAR_SERVICE_URL=http://car-service:3002
+      - CAR_AVAILABILITY_PATH_PREFIX=/api/v1/cars
+    command: sh -c "npm install && node src/index.js"
+    ports:
+      - "${BOOKING_SERVICE_PORT:-3003}:3003"
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: eco_swagger
+    environment:
+      - SWAGGER_JSON=/docs/openapi.yaml
+    volumes:
+      - ./docs/openapi.yaml:/docs/openapi.yaml:ro
+    ports:
+      - "${SWAGGER_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  user-seed:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./user-service:/app
+      - ./shared:/app/shared:ro
+      - ./shared:/shared:ro
+    environment:
+      - MONGODB_URI=${USERS_DB_URI:-mongodb://mongo:27017/eco_users?replicaSet=rs0}
+      - NODE_PATH=/app/node_modules
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-rs-init:
+        condition: service_completed_successfully
+    command: sh -c "npm install && node src/seed.js"
+    profiles: ["seed"]
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  car-seed:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./car-service:/app
+      - ./shared:/app/shared:ro
+      - ./shared:/shared:ro
+    environment:
+      - MONGODB_URI=${CARS_DB_URI:-mongodb://mongo:27017/eco_cars?replicaSet=rs0}
+      - NODE_PATH=/app/node_modules
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-rs-init:
+        condition: service_completed_successfully
+    command: sh -c "npm install && node src/seed.js"
+    profiles: ["seed"]
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+volumes:
+  mongo_data:

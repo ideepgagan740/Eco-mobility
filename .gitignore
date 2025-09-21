@@ -1,0 +1,24 @@
+# Env files
+.env
+.env.*
+!*.env.example
+user-service/.env
+car-service/.env
+booking-service/.env
+
+# Node
+node_modules/
+coverage/
+dist/
+build/
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
