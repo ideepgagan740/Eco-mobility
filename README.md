@@ -94,3 +94,30 @@ Tests:
 - (cd booking-service && npm test) runs overlap unit test with in-memory replica set.
 
 Base hosts: http://localhost and http://13.126.194.161
+
+# Eco Mobility
+
+## Services (public IP)
+- User service: http://3.7.177.3:3001
+- Car service: http://3.7.177.3:3002
+- Booking service: http://3.7.177.3:3003
+
+OpenAPI spec: docs/openapi.yaml
+
+## Inter-service availability
+Path: /api/v1/cars/:id/availability
+
+Example (car-service):
+- curl http://3.7.177.3:3002/api/v1/cars/68cfe4ba487bd43e5c69d9db/availability
+
+Expected 200 response (example):
+{
+  "carId": "68cfe4ba487bd43e5c69d9db",
+  "available": true,
+  "asOf": "2025-01-01T00:00:00Z"
+}
+{
+  "service": "car-service",
+  "status": "up",
+  "timestamp": "2025-01-01T00:00:00Z"
+}

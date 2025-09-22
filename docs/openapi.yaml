@@ -2,33 +2,49 @@ openapi: 3.0.3
 info:
   title: Eco Mobility APIs
   version: 1.0.0
-servers:
-  - url: http://localhost:3001
-    description: user-service
-  - url: http://localhost:3002
-    description: car-service
-  - url: http://localhost:3003
-    description: booking-service
 paths:
   /api/v1/register:
+    servers:
+      - url: http://3.7.177.3:3001
+        description: user-service
     post:
       tags: [auth]
       summary: Register
       requestBody:
         required: true
-        content: { application/json: { schema: { type: object, properties: { email: { type: string }, password: { type: string } }, required: [email, password] } } }
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+              required: [email, password]
       responses:
         '201': { description: Created }
   /api/v1/login:
+    servers:
+      - url: http://3.7.177.3:3001
+        description: user-service
     post:
       tags: [auth]
       summary: Login
       requestBody:
         required: true
-        content: { application/json: { schema: { type: object, properties: { email: { type: string }, password: { type: string } }, required: [email, password] } } }
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+              required: [email, password]
       responses:
         '200': { description: OK }
   /api/v1/cars:
+    servers:
+      - url: http://3.7.177.3:3002
+        description: car-service
     get:
       tags: [cars]
       summary: List cars
@@ -49,33 +65,89 @@ paths:
           name: model
           schema: { type: string }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Car'
     post:
       tags: [cars]
       summary: Create car (admin)
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/Car' } } }
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Car'
       responses:
-        '201': { description: Created }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Car'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /api/v1/bookings:
+    servers:
+      - url: http://3.7.177.3:3003
+        description: booking-service
     get:
       tags: [bookings]
       summary: List my bookings
       security: [{ bearerAuth: [] }]
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     post:
       tags: [bookings]
       summary: Create booking
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/BookingCreate' } } }
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreate'
       responses:
-        '201': { description: Created }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /api/v1/bookings/{id}/cancel:
+    servers:
+      - url: http://3.7.177.3:3003
+        description: booking-service
     put:
       tags: [bookings]
       summary: Cancel booking
@@ -86,7 +158,52 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/cars/{id}/availability:
+    servers:
+      - url: http://3.7.177.3:3002
+        description: car-service
+    get:
+      tags: [cars]
+      summary: Get car availability
+      description: Returns current availability status for the specified car.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: Car ID
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  carId: { type: string }
+                  available: { type: boolean }
+                  asOf: { type: string, format: date-time }
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 components:
   securitySchemes:
     bearerAuth:
@@ -99,9 +216,9 @@ components:
       properties:
         make: { type: string }
         model: { type: string }
-        year: { type: integer }
+        year: { type: integer, format: int32 }
         available: { type: boolean }
-        dailyPrice: { type: number }
+        dailyPrice: { type: number, format: float }
       required: [make, model, year]
     BookingCreate:
       type: object
@@ -110,3 +227,20 @@ components:
         startDate: { type: string, format: date-time }
         endDate: { type: string, format: date-time }
       required: [carId, startDate, endDate]
+    Booking:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        carId: { type: string }
+        startDate: { type: string, format: date-time }
+        endDate: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [confirmed, cancelled]
+      required: [id, carId, startDate, endDate, status]
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: string }
+      required: [message]
