@@ -1,9 +1,9 @@
 # Eco Mobility Microservices
 
 Services:
-- user-service (:3001): /register, /login
-- car-service (:3002): GET /cars, POST /cars (admin)
-- booking-service (:3003): POST /bookings, GET /bookings, PUT /bookings/:id/cancel
+- user-service (:3001): /api/v1/register, /api/v1/login
+- car-service (:3002): GET /api/v1/cars, POST /api/v1/cars (admin)
+- booking-service (:3003): POST /api/v1/bookings, GET /api/v1/bookings, PUT /api/v1/bookings/:id/cancel
 
 Prereqs:
 - Node 18+
@@ -43,49 +43,49 @@ Inter-microservice communication:
 API Routes and Usage:
 
 user-service (http://localhost:3001 or http://13.126.194.161:3001)
-- POST /register
+- POST /api/v1/register
   - Use: Create a new user.
   - Body: { "name": "Jane", "email": "jane@example.com", "password": "StrongPass123!" }
   - curl:
-    curl -s -X POST http://localhost:3001/register -H "Content-Type: application/json" -d '{"name":"Jane","email":"jane@example.com","password":"StrongPass123!"}'
-- POST /login
+    curl -s -X POST http://localhost:3001/api/v1/register -H "Content-Type: application/json" -d '{"name":"Jane","email":"jane@example.com","password":"StrongPass123!"}'
+- POST /api/v1/login
   - Use: Authenticate and receive JWT.
   - Body: { "email": "jane@example.com", "password": "StrongPass123!" }
   - Returns: { "token": "<JWT>" }
   - curl:
-    TOKEN=$(curl -s -X POST http://localhost:3001/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"AdminPass123!"}' | jq -r .token)
+    TOKEN=$(curl -s -X POST http://localhost:3001/api/v1/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"AdminPass123!"}' | jq -r .token)
 
 car-service (http://localhost:3002 or http://13.126.194.161:3002)
-- GET /cars
+- GET /api/v1/cars
   - Use: List cars. Response is cached for ~30s.
   - Optional query: ?available=true
   - curl:
-    curl -s http://localhost:3002/cars
-- POST /cars  (admin only)
+    curl -s http://localhost:3002/api/v1/cars
+- POST /api/v1/cars  (admin only)
   - Use: Create a car.
   - Auth: Authorization: Bearer $TOKEN (admin)
   - Body: { "make":"Tesla", "model":"Model 3", "plate":"ABC-123", "seats":5 }
   - curl:
-    curl -s -X POST http://localhost:3002/cars -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"make":"Tesla","model":"Model 3","plate":"ABC-123","seats":5}'
+    curl -s -X POST http://localhost:3002/api/v1/cars -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"make":"Tesla","model":"Model 3","plate":"ABC-123","seats":5}'
 
 booking-service (http://localhost:3003 or http://13.126.194.161:3003)
-- POST /bookings
+- POST /api/v1/bookings
   - Use: Create a booking for a car; prevents overlaps via per-day slots (Mongo txn).
   - Auth: Authorization: Bearer $TOKEN
   - Dates: ISO8601; start inclusive, end exclusive.
   - Body: { "carId":"<carId>", "startDate":"2025-01-10", "endDate":"2025-01-12" }
   - curl:
-    curl -s -X POST http://localhost:3003/bookings -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"carId":"<carId>","startDate":"2025-01-10","endDate":"2025-01-12"}'
-- GET /bookings
+    curl -s -X POST http://localhost:3003/api/v1/bookings -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"carId":"<carId>","startDate":"2025-01-10","endDate":"2025-01-12"}'
+- GET /api/v1/bookings
   - Use: List bookings for the authenticated user.
   - Auth: Authorization: Bearer $TOKEN
   - curl:
-    curl -s http://localhost:3003/bookings -H "Authorization: Bearer $TOKEN"
-- PUT /bookings/:id/cancel
+    curl -s http://localhost:3003/api/v1/bookings -H "Authorization: Bearer $TOKEN"
+- PUT /api/v1/bookings/:id/cancel
   - Use: Cancel an existing booking; frees reserved slots.
   - Auth: Authorization: Bearer $TOKEN
   - curl:
-    curl -s -X PUT http://localhost:3003/bookings/<bookingId>/cancel -H "Authorization: Bearer $TOKEN"
+    curl -s -X PUT http://localhost:3003/api/v1/bookings/<bookingId>/cancel -H "Authorization: Bearer $TOKEN"
 
 Swagger:
 - See docs/openapi.yaml (import in Swagger UI).

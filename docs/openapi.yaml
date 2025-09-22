@@ -10,7 +10,7 @@ servers:
   - url: http://localhost:3003
     description: booking-service
 paths:
-  /register:
+  /api/v1/register:
     post:
       tags: [auth]
       summary: Register
@@ -19,7 +19,7 @@ paths:
         content: { application/json: { schema: { type: object, properties: { email: { type: string }, password: { type: string } }, required: [email, password] } } }
       responses:
         '201': { description: Created }
-  /login:
+  /api/v1/login:
     post:
       tags: [auth]
       summary: Login
@@ -28,7 +28,7 @@ paths:
         content: { application/json: { schema: { type: object, properties: { email: { type: string }, password: { type: string } }, required: [email, password] } } }
       responses:
         '200': { description: OK }
-  /cars:
+  /api/v1/cars:
     get:
       tags: [cars]
       summary: List cars
@@ -59,7 +59,7 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/Car' } } }
       responses:
         '201': { description: Created }
-  /bookings:
+  /api/v1/bookings:
     get:
       tags: [bookings]
       summary: List my bookings
@@ -75,7 +75,7 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/BookingCreate' } } }
       responses:
         '201': { description: Created }
-  /bookings/{id}/cancel:
+  /api/v1/bookings/{id}/cancel:
     put:
       tags: [bookings]
       summary: Cancel booking
